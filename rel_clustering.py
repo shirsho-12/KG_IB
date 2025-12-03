@@ -12,6 +12,7 @@ import torch
 from tqdm import tqdm
 from collections import defaultdict
 import ast
+import json
 
 from model.openai_model import OpenAIModel
 from agent.core_agent import Agent
@@ -520,35 +521,68 @@ class OnlineRelationClusterer:
         return summaries
 
 
+def _type_pair_to_dict(tp: TypePair) -> Dict[str, str]:
+    return {"head_type": tp[0], "tail_type": tp[1]}
+
+
+def _serialize_cluster(cluster: RelationCluster) -> Dict:
+    return {
+        "cluster_id": cluster.cluster_id,
+        "mean": cluster.mean.tolist(),
+        "var_diag": cluster.var_diag.tolist(),
+        "count": cluster.count,
+        "surface_relations": sorted(cluster.surface_relations),
+        "type_counts": [
+            {"type_pair": _type_pair_to_dict(tp), "count": count}
+            for tp, count in cluster.type_counts.items()
+        ],
+    }
+
+
+def build_processing_artifacts(
+    clusterer: OnlineRelationClusterer, learner: PragmaticEquivalenceLearner
+) -> Dict:
+    artifacts = {
+        "clusters": [_serialize_cluster(c) for c in clusterer.clusters],
+        "cluster_summaries": clusterer.get_clusters_summary(),
+        "facts": [
+            {"head": h, "relation": r, "tail": t, "cluster_id": cid}
+            for h, r, t, cid in clusterer.fact_list
+        ],
+        "type_pairs": [_type_pair_to_dict(tp) for tp in clusterer.all_type_pairs_ordered],
+        "equivalence_classes": {
+            cid: sorted(eq) for cid, eq in learner.equivalence_classes.items()
+        },
+        "inverse_map": dict(learner.inverse_map),
+    }
+    return artifacts
+
+
+def save_processing_artifacts(
+    clusterer: OnlineRelationClusterer,
+    learner: PragmaticEquivalenceLearner,
+    output_file: Optional[Path] = None,
+) -> Path:
+    artifacts = build_processing_artifacts(clusterer, learner)
+    if output_file is None:
+        output_dir = Path.cwd() / "output" / "rel_clustering"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / "artifacts.json"
+    else:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+    output_file.write_text(json.dumps(artifacts, indent=2))
+    return output_file
+
+
 if __name__ == "__main__":
     # Tiny toy example: you will replace this with your real IE + embeddings.
-    sentences = [
-        "Alice works at AcmeCorp.",
-        "AcmeCorp employs Alice.",
-        "Bob works at AcmeCorp.",
-        "Carol works at InnoTech.",
-        "InnoTech employs Carol.",
-    ]
-
-    def toy_triple_extractor(sentence: str, idx: int) -> List[Triple]:
-        s = sentence.lower()
-        if "works at" in s:
-            parts = sentence.split()
-            # Very hacky, just to demo the pipeline
-            subj = parts[0]
-            obj = parts[-1].strip(".")
-            return [(subj, "works_at", obj)]
-        if "employs" in s:
-            parts = sentence.split()
-            subj = parts[0]
-            obj = parts[-1].strip(".")
-            return [(subj, "employs", obj)]
-        return []
+    sentences = Path(data_path).read_text().splitlines()
 
     # Use random embeddings as placeholder; replace with OpenAI embeddings
     clusterer = OnlineRelationClusterer(
         embedding_fn=embedding_fn,
-        triple_extractor=toy_triple_extractor,
+        triple_extractor=default_triple_extractor,
         type_fn=type_function,
         w_sem=0.5,
         w_type=1.0,
@@ -573,29 +607,11 @@ if __name__ == "__main__":
     for cid, inv in learner.inverse_map.items():
         print(f"Cluster {cid} inverse of {inv}")
 
+    artifact_path = save_processing_artifacts(clusterer, learner)
+    print(f"\nSaved clustering artifacts to {artifact_path}")
+
     # Redundancy checker
     red = PragmaticRedundancyChecker(learner)
     # Seed with existing facts
     for h, r, t, cid in clusterer.fact_list:
         red.add_fact(h, cid, t)
-
-    print("\n=== Test redundancy on new triple: AcmeCorp employs Bob ===")
-    new_triple = ("AcmeCorp", "employs", "Bob")
-    triple_type = (type_function(new_triple[0]), type_function(new_triple[2]))
-    # In a real system you'd pass this through the clusterer to get cid
-    emb = embedding_fn(*new_triple, triple_type)
-    # Fake: pick the cluster whose mean is closest (for demo)
-    best_idx = None
-    best_dist = float("inf")
-    for c in clusterer.clusters:
-        d = c.semantic_distortion(emb)
-        if d < best_dist:
-            best_dist = d
-            best_idx = c.cluster_id
-
-    cid_new = best_idx
-    h, r, t = new_triple
-    if cid_new is None or red.is_redundant(h, cid_new, t):
-        print("→ This triple is considered REDUNDANT.")
-    else:
-        print("→ This triple is NEW information.")
