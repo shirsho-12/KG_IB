@@ -7,8 +7,79 @@
 
 import numpy as np
 from collections import defaultdict, Counter
+from pathlib import Path
+import pickle
+from typing import Any, Optional, TYPE_CHECKING
 
 EPS = 1e-12
+
+if TYPE_CHECKING:
+    from rel_clustering import (
+        OnlineRelationClusterer,
+        PragmaticEquivalenceLearner,
+        PragmaticRedundancyChecker,
+    )
+
+
+def _ensure_parent(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _save_pickle(obj: Any, output_file: Path) -> Path:
+    _ensure_parent(output_file)
+    output_file.write_bytes(pickle.dumps(obj))
+    return output_file
+
+
+def _load_pickle(input_file: Path) -> Any:
+    return pickle.loads(input_file.read_bytes())
+
+
+def save_clusterer_state(
+    clusterer: "OnlineRelationClusterer", output_file: Optional[Path] = None
+) -> Path:
+    output_file = (
+        output_file
+        if output_file is not None
+        else Path.cwd() / "output" / "ib" / "clusterer.pkl"
+    )
+    return _save_pickle(clusterer, output_file)
+
+
+def load_clusterer_state(input_file: Path) -> "OnlineRelationClusterer":
+    return _load_pickle(input_file)
+
+
+def save_learner_state(
+    learner: "PragmaticEquivalenceLearner", output_file: Optional[Path] = None
+) -> Path:
+    output_file = (
+        output_file
+        if output_file is not None
+        else Path.cwd() / "output" / "ib" / "learner.pkl"
+    )
+    return _save_pickle(learner, output_file)
+
+
+def load_learner_state(input_file: Path) -> "PragmaticEquivalenceLearner":
+    return _load_pickle(input_file)
+
+
+def save_redundancy_checker_state(
+    checker: "PragmaticRedundancyChecker", output_file: Optional[Path] = None
+) -> Path:
+    output_file = (
+        output_file
+        if output_file is not None
+        else Path.cwd() / "output" / "ib" / "redundancy_checker.pkl"
+    )
+    return _save_pickle(checker, output_file)
+
+
+def load_redundancy_checker_state(
+    input_file: Path,
+) -> "PragmaticRedundancyChecker":
+    return _load_pickle(input_file)
 
 
 def compute_counts(triplets):

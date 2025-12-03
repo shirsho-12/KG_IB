@@ -13,6 +13,7 @@ from tqdm import tqdm
 from collections import defaultdict
 import ast
 import json
+import pickle
 
 from model.openai_model import OpenAIModel
 from agent.core_agent import Agent
@@ -575,6 +576,59 @@ def save_processing_artifacts(
     return output_file
 
 
+def save_clusterer_state(
+    clusterer: OnlineRelationClusterer, output_file: Optional[Path] = None
+) -> Path:
+    if output_file is None:
+        output_dir = Path.cwd() / "output" / "rel_clustering"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / "clusterer.pkl"
+    else:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+    output_file.write_bytes(pickle.dumps(clusterer))
+    return output_file
+
+
+def load_clusterer_state(input_file: Path) -> OnlineRelationClusterer:
+    return pickle.loads(input_file.read_bytes())
+
+
+def save_learner_state(
+    learner: PragmaticEquivalenceLearner, output_file: Optional[Path] = None
+) -> Path:
+    if output_file is None:
+        output_dir = Path.cwd() / "output" / "rel_clustering"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / "learner.pkl"
+    else:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+    output_file.write_bytes(pickle.dumps(learner))
+    return output_file
+
+
+def load_learner_state(input_file: Path) -> PragmaticEquivalenceLearner:
+    return pickle.loads(input_file.read_bytes())
+
+
+def save_redundancy_checker_state(
+    checker: PragmaticRedundancyChecker, output_file: Optional[Path] = None
+) -> Path:
+    if output_file is None:
+        output_dir = Path.cwd() / "output" / "rel_clustering"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / "redundancy_checker.pkl"
+    else:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+    output_file.write_bytes(pickle.dumps(checker))
+    return output_file
+
+
+def load_redundancy_checker_state(
+    input_file: Path,
+) -> PragmaticRedundancyChecker:
+    return pickle.loads(input_file.read_bytes())
+
+
 if __name__ == "__main__":
     # Tiny toy example: you will replace this with your real IE + embeddings.
     sentences = Path(data_path).read_text().splitlines()
@@ -607,11 +661,17 @@ if __name__ == "__main__":
     for cid, inv in learner.inverse_map.items():
         print(f"Cluster {cid} inverse of {inv}")
 
-    artifact_path = save_processing_artifacts(clusterer, learner)
-    print(f"\nSaved clustering artifacts to {artifact_path}")
-
     # Redundancy checker
     red = PragmaticRedundancyChecker(learner)
     # Seed with existing facts
     for h, r, t, cid in clusterer.fact_list:
         red.add_fact(h, cid, t)
+
+    artifact_path = save_processing_artifacts(clusterer, learner)
+    print(f"\nSaved clustering artifacts to {artifact_path}")
+    clusterer_state_path = save_clusterer_state(clusterer)
+    learner_state_path = save_learner_state(learner)
+    redundancy_state_path = save_redundancy_checker_state(red)
+    print(f"Saved clusterer state to {clusterer_state_path}")
+    print(f"Saved learner state to {learner_state_path}")
+    print(f"Saved redundancy checker state to {redundancy_state_path}")

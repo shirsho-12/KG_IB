@@ -12,6 +12,8 @@ import torch
 from tqdm import tqdm
 from collections import defaultdict
 import json
+import pickle
+import json
 
 load_dotenv()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -405,6 +407,24 @@ def save_processing_artifacts(
     return output_file
 
 
+def save_clusterer_state(
+    clusterer: RelationClusterer, output_file: Optional[Path] = None
+) -> Path:
+    if output_file is None:
+        output_dir = Path.cwd() / "output" / "reg_clust"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / "clusterer.pkl"
+    else:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+    output_file.write_bytes(pickle.dumps(clusterer))
+    return output_file
+
+
+def load_clusterer_state(input_file: Path) -> RelationClusterer:
+    return pickle.loads(input_file.read_bytes())
+
+
 sentences = Path(data_path).read_text().splitlines()
 
 clusterer = RelationClusterer(
@@ -420,3 +440,5 @@ clusterer.process_sentences(sentences)
 clusterer.print_clusters()
 artifact_path = save_processing_artifacts(clusterer)
 print(f"Saved clustering artifacts to {artifact_path}")
+clusterer_state_path = save_clusterer_state(clusterer)
+print(f"Saved clusterer state to {clusterer_state_path}")
