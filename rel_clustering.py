@@ -460,7 +460,7 @@ class OnlineRelationClusterer:
     # ---- main API ----
 
     def process_sentences(self, sentences: Sequence[str]) -> None:
-        for idx, sent in enumerate(sentences):
+        for idx, sent in tqdm(enumerate(sentences), total=len(sentences)):
             triples = self.triple_extractor(sent, idx)
             for h, r, t in triples:
                 self._process_triple(sent, h, r, t)
