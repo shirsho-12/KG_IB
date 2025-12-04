@@ -515,8 +515,8 @@ class OnlineRelationClusterer:
                     "cluster_id": c.cluster_id,
                     "surface_relations": sorted(c.surface_relations),
                     "n_triples": c.count,
-                    "canonical_type_pair": c.canonical_type_pair(),
-                    "type_counts": dict(c.type_counts),
+                    "canonical_type_pair": _type_pair_to_dict(c.canonical_type_pair()),
+                    "type_counts": _type_counts_list(c),
                 }
             )
         return summaries
@@ -526,6 +526,13 @@ def _type_pair_to_dict(tp: TypePair) -> Dict[str, str]:
     return {"head_type": tp[0], "tail_type": tp[1]}
 
 
+def _type_counts_list(cluster: RelationCluster) -> List[Dict]:
+    return [
+        {"type_pair": _type_pair_to_dict(tp), "count": count}
+        for tp, count in cluster.type_counts.items()
+    ]
+
+
 def _serialize_cluster(cluster: RelationCluster) -> Dict:
     return {
         "cluster_id": cluster.cluster_id,
@@ -533,10 +540,7 @@ def _serialize_cluster(cluster: RelationCluster) -> Dict:
         "var_diag": cluster.var_diag.tolist(),
         "count": cluster.count,
         "surface_relations": sorted(cluster.surface_relations),
-        "type_counts": [
-            {"type_pair": _type_pair_to_dict(tp), "count": count}
-            for tp, count in cluster.type_counts.items()
-        ],
+        "type_counts": _type_counts_list(cluster),
     }
 
 
