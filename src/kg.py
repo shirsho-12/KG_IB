@@ -8,8 +8,10 @@ class NXKnowledgeGraph:
     Edges store attributes including cluster_id and possibly the surface relation form.
     """
 
-    def __init__(self):
+    def __init__(self, file_path=None):
         self.G = nx.DiGraph()
+        if file_path:
+            self.load(file_path)
 
     def add_edge(self, h, cid, t, surface_relation=None, sentence=None):
         """
@@ -71,3 +73,36 @@ class NXKnowledgeGraph:
 
     def save(self, path):
         nx.write_graphml(self._make_graphml_safe(self.G), path)
+
+    def load(self, path):
+        self.G = nx.read_graphml(path)
+        # Convert JSON strings back to original types
+        for n, attrs in self.G.nodes(data=True):
+            norm = {}
+            for k, v in attrs.items():
+                try:
+                    parsed = json.loads(v)
+                    # Automatically convert arrays -> sorted tuple or set
+                    if isinstance(parsed, list) and len(parsed) > 0:
+                        # sorted tuple for deterministic comparison
+                        norm[k] = set(sorted(parsed))
+                    else:
+                        norm[k] = parsed
+                except json.JSONDecodeError:
+                    norm[k] = v
+            self.G.nodes[n].update(norm)
+
+        for u, v, attrs in self.G.edges(data=True):
+            norm = {}
+            for k, v in attrs.items():
+                try:
+                    parsed = json.loads(v)
+                    # Automatically convert arrays -> sorted tuple or set
+                    if isinstance(parsed, list) and len(parsed) > 0:
+                        # sorted tuple for deterministic comparison
+                        norm[k] = set(sorted(parsed))
+                    else:
+                        norm[k] = parsed
+                except json.JSONDecodeError:
+                    norm[k] = v
+            self.G[u][v].update(norm)
