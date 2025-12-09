@@ -21,16 +21,15 @@ class RelationCluster:
         self.type_counts[type_pair] += 1
 
         # Surface relation forms
-        self.surface_forms = defaultdict(int)
+        self.surface_forms = set()  # defaultdict(int)
 
     def update(self, emb, type_pair, surface_relation=None):
         """
         Online update of mean and diag-variance (Welford estimator).
         """
         self.count += 1
-        self.type_counts[type_pair] += 1
-        if surface_relation:
-            self.surface_forms[surface_relation] += 1
+        # if surface_relation:
+        #     self.surface_forms[surface_relation] += 1
         delta = emb - self.mean
         self.mean += delta / self.count
         delta2 = emb - self.mean
