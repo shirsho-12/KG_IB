@@ -1,4 +1,5 @@
 import networkx as nx
+import json
 
 
 class NXKnowledgeGraph:
@@ -39,3 +40,34 @@ class NXKnowledgeGraph:
         if self.G.has_edge(t, h):
             return cid in self.G[t][h]["clusters"]
         return False
+
+    def _make_graphml_safe(self, G):
+        """
+        Returns a deep-copied graph where all attributes
+        are GraphML-safe: strings, ints, floats, bools.
+        """
+
+        H = nx.DiGraph()
+
+        for n, attrs in G.nodes(data=True):
+            safe_attrs = {}
+            for k, v in attrs.items():
+                if isinstance(v, (set, list, dict)):
+                    safe_attrs[k] = json.dumps(list(v))
+                else:
+                    safe_attrs[k] = v
+            H.add_node(n, **safe_attrs)
+
+        for u, v, attrs in G.edges(data=True):
+            safe_attrs = {}
+            for k, val in attrs.items():
+                if isinstance(val, (set, list, dict)):
+                    safe_attrs[k] = json.dumps(list(val))
+                else:
+                    safe_attrs[k] = val
+            H.add_edge(u, v, **safe_attrs)
+
+        return H
+
+    def save(self, path):
+        nx.write_graphml(self._make_graphml_safe(self.G), path)

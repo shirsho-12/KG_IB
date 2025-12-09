@@ -1,4 +1,4 @@
-from kg import NXKnowledgeGraph
+from src.kg import NXKnowledgeGraph
 
 
 class RedundancyFilter:

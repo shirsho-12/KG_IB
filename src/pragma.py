@@ -1,6 +1,8 @@
 from collections import defaultdict
 import math
 
+from src.clusterer import OnlineRelationClusterer
+
 
 class PragmaticEquivalenceLearner:
     """
@@ -80,7 +82,7 @@ class PragmaticEquivalenceLearner:
             return 0.0
         return I / denom
 
-    def compute(self, clusterer):
+    def compute(self, clusterer: OnlineRelationClusterer):
         """
         clusterer: your OnlineRelationClusterer (from Step 2)
         Uses clusterer.fact_list: (h, r_surface, t, cid)

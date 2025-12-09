@@ -57,6 +57,12 @@ class RelationCluster:
         p = self.type_probability(type_pair, all_types)
         return -math.log(p + 1e-12, 2.0)
 
+    def __str__(self) -> str:
+        return f"Cluster {self.cluster_id}: {self.count} elements"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
 
 class OnlineRelationClusterer:
     def __init__(self, lambda_sem=0.5, lambda_type=1.0, lambda_new=3.0):

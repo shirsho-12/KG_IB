@@ -50,15 +50,15 @@ Guidelines:
 Constraints:
 - Do NOT infer facts not implied by the string.
 - Return ONLY JSON of the form:
-{
+{{
   "entity": "{{entity}}",
   "type": "TYPE_LABEL"
-}
+}}
 
 Entity:
-{{entity}}
+{entity}
 """
-        self.agent = Agent(prompt, llm)
+        self.agent = Agent(llm, prompt=prompt)
 
     def assign_type(self, entity: str):
         resp = self.agent.run({"entity": entity})
