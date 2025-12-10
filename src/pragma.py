@@ -1,6 +1,6 @@
 from collections import defaultdict
 import math
-
+from tqdm import tqdm
 from src.clusterer import OnlineRelationClusterer
 
 
@@ -106,7 +106,9 @@ class PragmaticEquivalenceLearner:
             universe |= E
 
         cids = sorted(edge_sets.keys())
-        for i in range(len(cids)):
+        for i in tqdm(
+            range(len(cids)), desc="Computing pragmatic equivalences", total=len(cids)
+        ):
             for j in range(i + 1, len(cids)):
                 ci, cj = cids[i], cids[j]
                 E_i = edge_sets[ci]

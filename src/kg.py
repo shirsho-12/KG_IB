@@ -91,18 +91,3 @@ class NXKnowledgeGraph:
                 except json.JSONDecodeError:
                     norm[k] = v
             self.G.nodes[n].update(norm)
-
-        for u, v, attrs in self.G.edges(data=True):
-            norm = {}
-            for k, v in attrs.items():
-                try:
-                    parsed = json.loads(v)
-                    # Automatically convert arrays -> sorted tuple or set
-                    if isinstance(parsed, list) and len(parsed) > 0:
-                        # sorted tuple for deterministic comparison
-                        norm[k] = set(sorted(parsed))
-                    else:
-                        norm[k] = parsed
-                except json.JSONDecodeError:
-                    norm[k] = v
-            self.G[u][v].update(norm)
