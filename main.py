@@ -57,6 +57,7 @@ def process_line(text, extractor, embedder, typer):
                 "tail": t,
                 "embedding": emb,
                 "type_pair": (type_h, type_t),
+                "sentence": text,
             }
         )
     s_dct["data"] = processed
@@ -112,8 +113,10 @@ print("Inverse map:", len(inverse_map))
 kg = NXKnowledgeGraph()
 redundancy_filter = RedundancyFilter(kg, equiv_classes, inverse_map)
 
-for h, r_surface, t, cid in clusterer.fact_list:
-    added = redundancy_filter.add_if_novel(h, cid, t, surface=r_surface)
+for h, r_surface, t, cid, sentence in clusterer.fact_list:
+    added = redundancy_filter.add_if_novel(
+        h, cid, t, surface=r_surface, sentence=sentence
+    )
     # print only if redundant
     if not added:
         print(["REDUNDANT", "ACCEPTED"][added], h, r_surface, t, "→ cluster", cid)

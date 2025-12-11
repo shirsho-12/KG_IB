@@ -4,12 +4,12 @@ import json
 
 class EntityTypingAgent:
     """
-    Wrapper around the generic Agent class using the Tier-2 ontology.
+    Wrapper around the generic Agent class using the Tier-1 ontology.
     """
 
     def __init__(self, llm):
         prompt = """
-You are an entity typing system based on the OntoNotes 5.0 / ACE coarse-grained ontology.
+You are an entity classification system.
 
 Given an entity string, assign exactly one semantic type from the following list:
 
@@ -17,38 +17,25 @@ Given an entity string, assign exactly one semantic type from the following list
 - ORG
 - GPE
 - LOCATION
-- FACILITY
-- PRODUCT
-- EVENT
-- WORK_OF_ART
-- LAW
-- LANGUAGE
 - DATE
-- TIME
-- QUANTITY
-- PERCENT
-- MONEY
-- NORP
+- NUMBER
+- WORK
+- EVENT
 - OTHER
 
 Guidelines:
 - PERSON: individual people or fictional characters.
 - ORG: companies, institutions, corporations, non-profits.
-- GPE: countries, cities, states, nationalities used as geopolitical units.
 - LOCATION: mountains, rivers, planets, regions.
-- FACILITY: airports, highways, stadiums, bridges, buildings.
-- PRODUCT: vehicles, software, consumer goods.
+- DATE: temporal expressions.
+- NUMBER: numeric values not representing dates.
+- WORK: tasks, publications, creative works.
 - EVENT: wars, elections, conferences, historical events.
-- WORK_OF_ART: books, films, songs, artworks.
-- LAW: legal documents or treaties.
-- LANGUAGE: natural languages.
-- DATE/TIME: temporal expressions.
-- QUANTITY/PERCENT/MONEY: numeric expressions.
-- NORP: nationalities, religions, political groups.
 - OTHER: anything else.
 
 Constraints:
 - Do NOT infer facts not implied by the string.
+- If ambiguous, choose the most common interpretation.
 - Return ONLY JSON of the form:
 {{
   "entity": "{{entity}}",

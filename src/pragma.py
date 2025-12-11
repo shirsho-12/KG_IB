@@ -85,12 +85,12 @@ class PragmaticEquivalenceLearner:
     def compute(self, clusterer: OnlineRelationClusterer):
         """
         clusterer: your OnlineRelationClusterer (from Step 2)
-        Uses clusterer.fact_list: (h, r_surface, t, cid)
+        Uses clusterer.fact_list: (h, r_surface, t, cid, sentence)
         and clusterer.clusters: RelationCluster objects
         """
         # Build extensional edge sets per cluster
         edge_sets = defaultdict(set)  # cid -> {(h,t)}
-        for h, r, t, cid in clusterer.fact_list:
+        for h, r, t, cid, _ in clusterer.fact_list:
             edge_sets[cid].add((h, t))
 
         # Precompute swapped edges for inverse direction

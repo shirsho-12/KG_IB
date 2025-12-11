@@ -72,7 +72,7 @@ class OnlineRelationClusterer:
 
         self.clusters = []
         self.all_type_pairs = set()
-        self.fact_list = []  # (head, relation, tail, cluster_id)
+        self.fact_list = []  # (head, relation, tail, cluster_id, sentence)
 
     def _register_type_pair(self, tp):
         self.all_type_pairs.add(tp)
@@ -83,6 +83,7 @@ class OnlineRelationClusterer:
         t = triple["tail"]
         emb = triple["embedding"]
         type_pair = triple["type_pair"]
+        sentence = triple.get("sentence")
 
         self._register_type_pair(type_pair)
 
@@ -91,7 +92,7 @@ class OnlineRelationClusterer:
             cl = RelationCluster(0, emb, type_pair)
             cl.surface_forms.add(r)
             self.clusters.append(cl)
-            self.fact_list.append((h, r, t, 0))
+            self.fact_list.append((h, r, t, 0, sentence))
             return 0
 
         # Otherwise compute distortion for each cluster
@@ -112,7 +113,7 @@ class OnlineRelationClusterer:
             cl = self.clusters[best_idx]
             cl.update(emb, type_pair)
             cl.surface_forms.add(r)
-            self.fact_list.append((h, r, t, best_idx))
+            self.fact_list.append((h, r, t, best_idx, sentence))
             return best_idx
 
         else:
@@ -120,5 +121,5 @@ class OnlineRelationClusterer:
             cl = RelationCluster(new_id, emb, type_pair)
             cl.surface_forms.add(r)
             self.clusters.append(cl)
-            self.fact_list.append((h, r, t, new_id))
+            self.fact_list.append((h, r, t, new_id, sentence))
             return new_id

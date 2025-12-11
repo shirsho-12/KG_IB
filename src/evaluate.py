@@ -13,6 +13,7 @@ def sample_kg_edges(kg, k=50):
         # GraphML might store clusters as a string, so normalize
         clusters = data.get("clusters", None)
         surfaces = data.get("surfaces", None)
+        sentences = data.get("sentences", None)
 
         formatted.append(
             {
@@ -20,6 +21,7 @@ def sample_kg_edges(kg, k=50):
                 "tail": t,
                 "clusters": clusters,
                 "surface_forms": surfaces,
+                "sentences": sentences,
             }
         )
 
@@ -53,7 +55,7 @@ def compute_precision(responses):
 def compute_semantic_coherence(clusterer, embedding_map):
     cid_to_embs = {cl.cluster_id: [] for cl in clusterer.clusters}
 
-    for h, r, t, cid in clusterer.fact_list:
+    for h, r, t, cid, _ in clusterer.fact_list:
         emb = embedding_map.get((h, r, t))
         if emb is not None:
             cid_to_embs[cid].append(emb)
@@ -92,7 +94,7 @@ def compute_type_entropy(clusterer):
 
 def build_edge_sets(clusterer):
     E = defaultdict(set)
-    for h, r, t, cid in clusterer.fact_list:
+    for h, r, t, cid, _ in clusterer.fact_list:
         E[cid].add((h, t))
     return E
 
@@ -124,7 +126,7 @@ def cluster_level_reduction(clusterer, kg):
     cluster_counts_final = defaultdict(int)
 
     # Raw counts per cluster
-    for _, _, _, cid in clusterer.fact_list:
+    for _, _, _, cid, _ in clusterer.fact_list:
         cluster_counts_raw[cid] += 1
 
     # Final KG counts per cluster
