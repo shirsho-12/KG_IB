@@ -73,7 +73,7 @@ parser.add_argument(
     "--dset",
     type=str,
     required=True,
-    choices=["rebel", "webnlg", "wiki-nre"],
+    choices=["rebel", "example", "webnlg", "wiki-nre"],
     help="Name of dataset",
 )
 args = parser.parse_args()
@@ -82,11 +82,12 @@ input_path = Path(f"data/{dset_name}.txt")
 
 dset = input_path.read_text().splitlines()
 
-output_path = Path(f"output/{dset_name}/s_1_extracted.pkl")
-output_path.parent.mkdir(parents=True, exist_ok=True)
-if output_path.exists():
-    print(f"Stage 1 data already exists at {output_path}, skipping extraction.")
-    s_1_data = pickle.load(open(output_path, "rb"))
+output_path = Path(f"output/{dset_name}/tier_2")
+output_file_path = output_path / "s_1_extracted.pkl"
+output_path.mkdir(parents=True, exist_ok=True)
+if output_file_path.exists():
+    print(f"Stage 1 data already exists at {output_file_path}, skipping extraction.")
+    s_1_data = pickle.load(open(output_file_path, "rb"))
 else:
     s_1_data = []
     for line in tqdm(dset, desc="Stage 1", total=len(dset)):
@@ -94,7 +95,7 @@ else:
         s_1_data.append(processed)
 
     # save to disk
-    pickle.dump(s_1_data, open(output_path, "wb"))
+    pickle.dump(s_1_data, open(output_file_path, "wb"))
     print(f"Saved stage 1 data to {output_path}")
 
 clusterer = OnlineRelationClusterer()
@@ -122,5 +123,5 @@ for h, r_surface, t, cid, sentence in clusterer.fact_list:
         print(["REDUNDANT", "ACCEPTED"][added], h, r_surface, t, "→ cluster", cid)
 print(f"Final KG has {len(kg.G.nodes())} nodes and {len(kg.G.edges())} edges.")
 
-kg.save(Path(f"output/{dset_name}/final_kg.graphml"))
-print(f"Saved KG to output/{dset_name}/final_kg.graphml")
+kg.save(output_path /"final_kg.graphml")
+print(f"Saved KG to {output_path}/final_kg.graphml")

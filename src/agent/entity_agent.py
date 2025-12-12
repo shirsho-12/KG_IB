@@ -10,7 +10,7 @@ class EntityTypingAgent:
 
     def __init__(self, llm):
         prompt = Path(
-            Path(__file__).parent.parent / "prompts" / "tier_2_ontology.txt"
+            Path(__file__).parent.parent.parent / "prompts" / "tier_2_ontology.txt"
         ).read_text()
         self.agent = Agent(llm, prompt=prompt)
 
