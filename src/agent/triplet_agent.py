@@ -16,18 +16,27 @@ class TripletExtractionAgent:
         """
         self.agent = Agent(llm, prompt)
 
-    def extract(self, text: str):
-        """
-        Returns a list of triples: [(head, relation, tail), ...]
-        """
-        resp = self.agent.run({"text": text})
+    def _parse_response(self, resp: str):
         if "```json" in resp:
             resp = resp.split("```json")[1].split("```")[0].strip()
         try:
             triples = json.loads(resp)
         except Exception as e:
-            # Fallback if the agent didn’t produce valid JSON
             print(f"Error parsing JSON: {e}")
             print(resp)
             return []
         return [(d["head"], d["relation"], d["tail"]) for d in triples]
+
+    def extract(self, text: str):
+        """
+        Returns a list of triples: [(head, relation, tail), ...]
+        """
+        resp = self.agent.run({"text": text})
+        return self._parse_response(resp)
+
+    async def extract_async(self, text: str):
+        """
+        Async variant of extract.
+        """
+        resp = await self.agent.run_async({"text": text})
+        return self._parse_response(resp)

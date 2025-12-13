@@ -1,3 +1,5 @@
+import asyncio
+
 from openai import OpenAI
 import numpy as np
 import torch
@@ -25,6 +27,9 @@ class EmbeddingGenerator:
             torch.tensor(data_point.embedding) for data_point in response.data
         ]
         return torch.stack(embeddings).numpy()
+
+    async def aembedding_fn(self, relation: str, context: str) -> np.ndarray:
+        return await asyncio.to_thread(self.embedding_fn, relation, context)
 
     def __call__(self, relation: str, context: str) -> np.ndarray:
         return self.embedding_fn(relation, context)

@@ -1,7 +1,12 @@
+import asyncio
 import os
-from model.openai_model import OpenAIModel
-import openai
+import random
+
 from dotenv import load_dotenv
+import openai
+from tqdm.asyncio import tqdm as async_tqdm
+
+from model.openai_model import OpenAIModel
 from src.agent import TripletExtractionAgent, EntityTypingAgent
 from src.embedding_generator import EmbeddingGenerator
 
@@ -43,6 +48,51 @@ def process_line(text, extractor, embedder, typer):
     return s_dct
 
 
+async def process_line_async(text, extractor, embedder, typer):
+    triples = await extractor.extract_async(text)
+    s_dct = {"sentence": text, "triples": triples}
+    if not triples:
+        s_dct["data"] = []
+        return s_dct
+
+    async def handle_triple(triple):
+        h, r, t = triple
+        emb_task = asyncio.create_task(embedder.aembedding_fn(r, text))
+        type_h_task = asyncio.create_task(typer.assign_type_async(h))
+        type_t_task = asyncio.create_task(typer.assign_type_async(t))
+        embedding = await emb_task
+        type_h, type_t = await asyncio.gather(type_h_task, type_t_task)
+        return {
+            "head": h,
+            "relation": r,
+            "tail": t,
+            "embedding": embedding,
+            "type_pair": (type_h, type_t),
+            "sentence": text,
+        }
+
+    processed = await asyncio.gather(*(handle_triple(triple) for triple in triples))
+    s_dct["data"] = processed
+    return s_dct
+
+
+async def process_tasks_asynchronously(tasks, worker, concurrency_limit, desc):
+    if not tasks:
+        return []
+    semaphore = asyncio.Semaphore(concurrency_limit)
+
+    async def process_with_semaphore(task, pbar):
+        async with semaphore:
+            await asyncio.sleep(random.uniform(0.1, 0.3))
+            result = await worker(task)
+            pbar.update(1)
+            return result
+
+    with async_tqdm(total=len(tasks), desc=desc) as pbar:
+        async_tasks = [process_with_semaphore(task, pbar) for task in tasks]
+        return await asyncio.gather(*async_tasks)
+
+
 def get_model():
     model = OpenAIModel(
         model_name="openai/gpt-4o-mini",
@@ -59,7 +109,8 @@ def get_model():
 
 def get_agents():
     model, client = get_model()
-    extractor = TripletExtractionAgent(model)
+    llm = model.llm
+    extractor = TripletExtractionAgent(llm)
     embedder = EmbeddingGenerator(client)
-    typer = EntityTypingAgent(model)
+    typer = EntityTypingAgent(llm)
     return extractor, embedder, typer

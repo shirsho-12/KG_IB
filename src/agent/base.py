@@ -1,26 +1,21 @@
 from abc import ABC, abstractmethod
 
-# from src.utils.logger import get_logger
+import backoff
+from langchain.prompts import PromptTemplate
+from langchain.schema import StrOutputParser
+from langchain.schema.runnable import Runnable
 
 
 class BaseAgent(ABC):
     """An abstract base class for all agents in the pipeline."""
 
     def __init__(self):
-        # self.logger = get_logger(self.__class__.__name__)
         pass
 
     @abstractmethod
     def run(self, *args, **kwargs):
         """The main entry point for the agent's execution."""
         pass
-
-
-from langchain.prompts import PromptTemplate
-from langchain.schema import StrOutputParser
-from langchain.schema.runnable import Runnable
-
-from src.agent.base import BaseAgent
 
 
 class Agent(BaseAgent):
@@ -34,8 +29,16 @@ class Agent(BaseAgent):
 
     def run(self, invoke_dct: dict) -> str:
         """Generates output based on the input dictionary."""
-        try:
-            output = self.chain.invoke(invoke_dct)
-            return output
-        except Exception as e:
-            raise e
+        return self.chain.invoke(invoke_dct)
+
+    @staticmethod
+    @backoff.on_exception(backoff.expo, Exception, max_tries=5)
+    async def _run_with_retry(chain: Runnable, invoke_dct: dict) -> str:
+        output = await chain.ainvoke(invoke_dct)
+        if not output:
+            raise ValueError("Empty response from LLM.")
+        return output
+
+    async def run_async(self, invoke_dct: dict) -> str:
+        """Async variant of run with retries."""
+        return await self._run_with_retry(self.chain, invoke_dct)
