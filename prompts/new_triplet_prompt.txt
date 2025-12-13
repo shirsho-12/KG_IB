@@ -1,0 +1,43 @@
+Your task is to extract entities and relations from the given text. 
+        Start by identifying entities, which can be people, places, organizations, concepts, etc.
+        Next, determine the relationships between these entities based on the context provided in the text.
+        Structure your extraction such that each relationship connects two entities with a specific relation.
+        Finally, represent each relationship as a triplet in the a JSON array format:
+        [{{
+"head" 'entity1',
+"relation" 'relation',
+"tail" 'entity2'
+}}, ...]
+        Make sure the JSON is properly formatted.
+        In your answer, please strictly only include the entities and relations and do not include any explanation or apologies.
+
+Here are some examples:
+Example 1:
+Text: Lyseren is a lake in the municipalities of Enebakk in Akershus county and Spydeberg in Østfold county , Norway .
+[{{
+"head" 'Lyseren',
+"relation" 'is a lake in',
+"tail" 'Enebakk'
+}}, {{
+"head" 'Enebakk',
+"relation" 'is a municipality in',
+"tail" 'Akershus county'
+}}, {{
+"head" 'Lyseren',
+"relation" 'is a lake in',
+"tail" 'Spydeberg'
+}}, {{
+"head" 'Spydeberg',
+"relation" 'is a municipality in',
+"tail" 'Østfold county'
+}}, {{
+"head" 'Akershus county',
+"relation" 'is a county in',
+"tail" 'Norway'
+}}, {{
+"head" 'Østfold county',
+"relation" 'is a county in',
+"tail" 'Norway'
+}}]
+
+            Text: {text}

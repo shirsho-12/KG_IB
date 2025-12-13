@@ -1,72 +1,16 @@
 from pprint import pprint
-from dotenv import load_dotenv
+
 from pathlib import Path
 from src.kg import NXKnowledgeGraph
 from src.clusterer import OnlineRelationClusterer
 from src.pragma import PragmaticEquivalenceLearner
 from src.redundancy_filter import RedundancyFilter
-import os
-from model.openai_model import OpenAIModel
-import openai
-from src.agent import TripletExtractionAgent, EntityTypingAgent
-from src.embedding_generator import EmbeddingGenerator
+from src.utils import process_line, get_agents
+
 import argparse
 from tqdm import tqdm
 import pickle
 
-
-load_dotenv()
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-
-model = OpenAIModel(
-    model_name="openai/gpt-4o-mini",
-    base_url=OPENROUTER_BASE_URL,
-    api_key=OPENROUTER_API_KEY,
-    temperature=0.0,
-)
-client = openai.Client(
-    api_key=OPENROUTER_API_KEY,
-    base_url=OPENROUTER_BASE_URL,
-)
-
-
-def process_line(text, extractor, embedder, typer):
-    """
-    Runs:
-    1) triple extraction
-    2) embedding generation
-    3) type assignment
-    Returns array of dict objects, one per triple.
-    """
-    triples = extractor.extract(text)
-    s_dct = {"sentence": text, "triples": triples}
-    processed = []
-    for h, r, t in triples:
-
-        # Embedding from relation + the full sentence
-        emb = embedder(r, text)
-        # Type pair
-        type_h = typer.assign_type(h)
-        type_t = typer.assign_type(t)
-
-        processed.append(
-            {
-                "head": h,
-                "relation": r,
-                "tail": t,
-                "embedding": emb,
-                "type_pair": (type_h, type_t),
-                "sentence": text,
-            }
-        )
-    s_dct["data"] = processed
-    return s_dct
-
-
-extractor = TripletExtractionAgent(model)
-embedder = EmbeddingGenerator(client)
-typer = EntityTypingAgent(model)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -88,6 +32,12 @@ output_path.mkdir(parents=True, exist_ok=True)
 if output_file_path.exists():
     print(f"Stage 1 data already exists at {output_file_path}, skipping extraction.")
     s_1_data = pickle.load(open(output_file_path, "rb"))
+output_path = Path(f"output/{dset_name}/s_1_extracted.pkl")
+output_path.parent.mkdir(parents=True, exist_ok=True)
+extractor, embedder, typer = get_agents()
+if output_path.exists():
+    print(f"Stage 1 data already exists at {output_path}, skipping extraction.")
+    s_1_data = pickle.load(open(output_path, "rb"))
 else:
     s_1_data = []
     for line in tqdm(dset, desc="Stage 1", total=len(dset)):
@@ -123,5 +73,5 @@ for h, r_surface, t, cid, sentence in clusterer.fact_list:
         print(["REDUNDANT", "ACCEPTED"][added], h, r_surface, t, "→ cluster", cid)
 print(f"Final KG has {len(kg.G.nodes())} nodes and {len(kg.G.edges())} edges.")
 
-kg.save(output_path /"final_kg.graphml")
+kg.save(output_path / "final_kg.graphml")
 print(f"Saved KG to {output_path}/final_kg.graphml")

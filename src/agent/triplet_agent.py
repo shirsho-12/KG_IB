@@ -25,8 +25,9 @@ class TripletExtractionAgent:
             resp = resp.split("```json")[1].split("```")[0].strip()
         try:
             triples = json.loads(resp)
-        except:
+        except Exception as e:
             # Fallback if the agent didn’t produce valid JSON
+            print(f"Error parsing JSON: {e}")
             print(resp)
             return []
         return [(d["head"], d["relation"], d["tail"]) for d in triples]
