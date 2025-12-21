@@ -25,7 +25,19 @@ class TripletExtractionAgent:
             print(f"Error parsing JSON: {e}")
             print(resp)
             return []
-        return [(d["head"], d["relation"], d["tail"]) for d in triples]
+        cleaned = []
+        if not isinstance(triples, list):
+            return cleaned
+        for item in triples:
+            if not isinstance(item, dict):
+                continue
+            head = item.get("head")
+            relation = item.get("relation")
+            tail = item.get("tail")
+            if head is None or relation is None or tail is None:
+                continue
+            cleaned.append((head, relation, tail))
+        return cleaned
 
     def extract(self, text: str):
         """

@@ -56,6 +56,8 @@ async def process_line_async(text, extractor, embedder, typer):
         return s_dct
 
     async def handle_triple(triple):
+        if triple is None:
+            return None
         h, r, t = triple
         emb_task = asyncio.create_task(embedder.aembedding_fn(r, text))
         type_h_task = asyncio.create_task(typer.assign_type_async(h))
@@ -72,7 +74,7 @@ async def process_line_async(text, extractor, embedder, typer):
         }
 
     processed = await asyncio.gather(*(handle_triple(triple) for triple in triples))
-    s_dct["data"] = processed
+    s_dct["data"] = [item for item in processed if item is not None]
     return s_dct
 
 

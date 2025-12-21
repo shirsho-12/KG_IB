@@ -1,5 +1,6 @@
 import asyncio
 
+import backoff
 from openai import OpenAI
 import numpy as np
 import torch
@@ -15,6 +16,7 @@ class EmbeddingGenerator:
         self.dim = dim
         self.client = client
 
+    @backoff.on_exception(backoff.expo, Exception, max_tries=5)
     def embedding_fn(self, relation: str, context: str) -> np.ndarray:
         """
         GPT-based embedding function.
@@ -23,6 +25,8 @@ class EmbeddingGenerator:
         response = self.client.embeddings.create(
             input=[text], model="text-embedding-3-small"
         )
+        if not response.data:
+            raise ValueError("No embedding data received.")
         embeddings = [
             torch.tensor(data_point.embedding) for data_point in response.data
         ]
