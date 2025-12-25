@@ -121,6 +121,10 @@ class Pipeline:
 
     async def process_line_async(self, text):
         triples = await self.extractor.extract_async(text)
+        if triples is None or len(triples) == 0:
+            # one more attempt to extract
+            triples = await self.extractor.extract_async(text)
+
         s_dct = {"sentence": text, "triples": triples}
         filtered = []
         for triple in triples:
