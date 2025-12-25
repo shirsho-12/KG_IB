@@ -91,6 +91,20 @@ class PragmaticEquivalenceLearner:
         # Build extensional edge sets per cluster
         edge_sets = defaultdict(set)  # cid -> {(h,t)}
         for h, r, t, cid, _ in clusterer.fact_list:
+            if type(h) is list and type(t) is str:
+                print(h)
+                for hh in h:
+                    if hh == t:
+                        continue
+                    edge_sets[cid].add((hh, t))
+                continue
+            if type(h) is str and type(t) is list:
+                print(t)
+                for tt in t:
+                    if tt == h:
+                        continue
+                    edge_sets[cid].add((h, tt))
+                continue
             edge_sets[cid].add((h, t))
 
         # Precompute swapped edges for inverse direction

@@ -37,6 +37,8 @@ async def process_line_async(text, extractor, embedder, typer):
         if triple is None:
             continue
         h, r, t = triple
+        if h is None or t is None or t is None:
+            continue
         if "Paragraph" in h or "Paragraph" in t:
             continue
         if "Title:" in h or "Title:" in t:
@@ -141,9 +143,20 @@ async def main():
         redundancy_filter = RedundancyFilter(kg, equiv_classes, inverse_map)
 
         for h, r_surface, t, cid, sentence in clusterer.fact_list:
-            added = redundancy_filter.add_if_novel(
-                h, cid, t, surface=r_surface, sentence=sentence
-            )
+            if type(h) is list:
+                for hh in h:
+                    added = redundancy_filter.add_if_novel(
+                        hh, cid, t, surface=r_surface, sentence=sentence
+                    )
+            elif type(t) is list:
+                for tt in t:
+                    added = redundancy_filter.add_if_novel(
+                            h, cid, tt, surface=r_surface, sentence=sentence
+                        )
+            else:
+                added = redundancy_filter.add_if_novel(
+                        h, cid, t, surface=r_surface, sentence=sentence
+                    )
             if not added:
                 log_text += f"REDUNDANT: {h}, {r_surface}, {t} → cluster {cid}\n"
         log_text += (
