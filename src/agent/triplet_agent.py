@@ -1,5 +1,6 @@
 from .base import Agent
 import json
+from pathlib import Path
 
 
 class TripletExtractionAgent:
@@ -9,11 +10,10 @@ class TripletExtractionAgent:
     """
 
     def __init__(self, llm):
-        prompt = """Extract all relational triples from the text.
-            Return a JSON array of objects with keys: head, relation, tail.
+        prompt = Path(
+            Path(__file__).parent.parent.parent / "prompts" / "new_triplet_prompt.txt"
+        ).read_text()
 
-            Text: {text}
-        """
         self.agent = Agent(llm, prompt)
 
     def _parse_response(self, resp: str):

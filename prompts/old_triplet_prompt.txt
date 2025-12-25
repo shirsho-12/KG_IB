@@ -1,0 +1,5 @@
+Extract all relational triples from the text.
+Return a JSON array of objects with keys: head, relation, tail.
+
+Text: {text}
+        

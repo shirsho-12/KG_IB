@@ -56,6 +56,7 @@ async def main():
         with open(legacy_stage_one_file, "rb") as f:
             s_1_data = pickle.load(f)
     else:
+
         async def worker(text):
             return await process_line_async(text, extractor, embedder, typer)
 
