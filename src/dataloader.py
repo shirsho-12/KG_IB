@@ -39,6 +39,27 @@ class HotpotDataset(BaseDataset):
         return {"id": id_, "question": question, "answer": answer, "text": samples}
 
 
+class MuSiQueDataset(BaseDataset):
+    def __init__(self, data, partition: str = "validation"):
+        super().__init__(data=data, partition=partition)
+
+    def __getitem__(self, idx):
+        sample = self.data[idx]
+        id_ = sample["id"]
+        question = sample["question"]
+        answer = [sample["answer"]]
+        if len(sample["answer_aliases"]) > 0:
+            answer.extend(sample["answer_aliases"])
+        paragraphs = sample["paragraphs"]
+        samples = []
+        for para in paragraphs:
+            title = para["title"]
+            para_sentences = para["paragraph_text"]
+            text = "Title: " + title + "\nParagraph: " + para_sentences + "\n"
+            samples.append(text)
+        return {"id": id_, "question": question, "answer": answer, "text": samples}
+
+
 def collate_fn(batch):
     ids = [item["id"] for item in batch]
     questions = [item["question"] for item in batch]
@@ -47,10 +68,16 @@ def collate_fn(batch):
     return {"ids": ids, "questions": questions, "answers": answers, "texts": texts}
 
 
-def get_hotpot_dataloader(
-    data=None, partition="validation", batch_size=8, shuffle=False
-):
+def get_hotpot_dataloader(data, partition="validation", batch_size=8, shuffle=False):
     dataset = HotpotDataset(data=data, partition=partition)
+    dataloader = DataLoader(
+        dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn
+    )
+    return dataloader
+
+
+def get_musique_dataloader(data, partition="validation", batch_size=8, shuffle=False):
+    dataset = MuSiQueDataset(data=data, partition=partition)
     dataloader = DataLoader(
         dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn
     )

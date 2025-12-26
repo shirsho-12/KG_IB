@@ -3,15 +3,23 @@ from pathlib import Path
 
 from datasets import load_dataset
 import time
-from src.dataloader import get_hotpot_dataloader
+from src.dataloader import get_hotpot_dataloader, get_musique_dataloader
 from src.pipeline import Pipeline
 import pickle
 
 parser = argparse.ArgumentParser()
+
+parser.add_argument(
+    "--dataset",
+    type=str,
+    default="hotpotqa",
+    help="Dataset to use: hotpotqa or musique",
+)
+
 parser.add_argument(
     "--samples",
     type=int,
-    default=9,
+    default=-1,
     help="Number of validation samples to process",
 )
 parser.add_argument(
@@ -37,24 +45,30 @@ parser.add_argument(
 
 def main():
     args = parser.parse_args()
-    ds = load_dataset("hotpotqa/hotpot_qa", "distractor", cache_dir="data/")
-    # dset = ds["validation"]
-    # print(len(dset))
+    if args.dataset == "hotpotqa":
+        ds = load_dataset("hotpotqa/hotpot_qa", "distractor", cache_dir="data/")
+        dataloader = get_hotpot_dataloader(
+            data=ds, partition="validation", batch_size=args.save_every, shuffle=False
+        )
+    elif args.dataset == "musique":
+        ds = load_dataset("dgslibisey/MuSiQue", cache_dir="data/")
+        dataloader = get_musique_dataloader(
+            data=ds, partition="validation", batch_size=args.save_every, shuffle=False
+        )
+    else:
+        raise ValueError(f"Unknown dataset: {args.dataset}")
     today = time.strftime("%d-%m-%Y")
 
-    dset_name = "hotpotqa"
+    dset_name = args.dataset
     output_path = Path(f"output/{dset_name}/{today}")
     output_file_path = output_path / "s_1_extracted.pkl"
     output_kg_file_path = output_path / "kg.pkl"
     output_path.mkdir(parents=True, exist_ok=True)
 
-    dataloader = get_hotpot_dataloader(
-        data=ds, partition="validation", batch_size=args.save_every, shuffle=False
-    )
     pipeline = Pipeline()
     stage_1_results, stage_2_results = pipeline.evaluate_dataset(
         dataloader,
-        max_samples=None,
+        max_samples=None if args.samples == -1 else args.samples,
         save_every=args.save_every,
         concurrency=args.concurrency,
         start_index=args.start_index,
