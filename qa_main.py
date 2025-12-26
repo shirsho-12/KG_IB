@@ -3,7 +3,11 @@ from pathlib import Path
 
 from datasets import load_dataset
 import time
-from src.dataloader import get_hotpot_dataloader, get_musique_dataloader
+from src.dataloader import (
+    get_hotpot_dataloader,
+    get_musique_dataloader,
+    get_2wikimultihopqa_dataloader,
+)
 from src.pipeline import Pipeline
 import pickle
 
@@ -13,7 +17,7 @@ parser.add_argument(
     "--dataset",
     type=str,
     default="hotpotqa",
-    help="Dataset to use: hotpotqa or musique",
+    help="Dataset to use: hotpotqa, musique, or 2wikimultihopqa",
 )
 
 parser.add_argument(
@@ -54,6 +58,14 @@ def main():
         ds = load_dataset("dgslibisey/MuSiQue", cache_dir="data/")
         dataloader = get_musique_dataloader(
             data=ds, partition="validation", batch_size=args.save_every, shuffle=False
+        )
+    elif args.dataset == "2wikimultihopqa":
+        data_path = Path("data/2wikimultihopqa/")
+        dataloader = get_2wikimultihopqa_dataloader(
+            data_path=data_path,
+            partition="dev",
+            batch_size=args.save_every,
+            shuffle=False,
         )
     else:
         raise ValueError(f"Unknown dataset: {args.dataset}")
