@@ -16,6 +16,7 @@ class Pipeline:
         self.extractor, self.embedder, self.typer = get_agents()
         self.clusterer = OnlineRelationClusterer()
         self.pragma_learner = PragmaticEquivalenceLearner()
+        self.output_memo = {}
 
     def evaluate_dataset(
         self,
@@ -57,6 +58,18 @@ class Pipeline:
 
         return stage_1_all_results, stage_2_all_results
 
+    def update_memo_with_saved(self, folder_path):
+        p = Path(folder_path)
+        for file in p.glob("stage_1_results_*.pkl"):
+            with open(file, "rb") as f:
+                data = pickle.load(f)
+                for sample_id, samples in data.items():
+                    for sample in samples:
+                        for triple in sample["data"]:
+                            h, r, t = triple
+                            text = sample["sentence"]
+                            self.output_memo[text] = sample
+
     def save_results(self, results, filepath):
         with open(filepath, "wb") as f:
             pickle.dump(results, f)
@@ -75,6 +88,7 @@ class Pipeline:
         async def worker(payload):
             sample_id, text = payload
             processed = await self.process_line_async(text)
+            self.output_memo[text] = processed
             return sample_id, processed
 
         loop = asyncio.get_event_loop()
@@ -123,6 +137,8 @@ class Pipeline:
         return graph_dct, log_text
 
     async def process_line_async(self, text):
+        if text in self.output_memo:
+            return self.output_memo[text]
         triples = await self.extractor.extract_async(text)
         if triples is None or len(triples) == 0:
             # one more attempt to extract
@@ -167,4 +183,5 @@ class Pipeline:
         triple_tasks = [handle_triple(triple) for triple in filtered]
         processed_triples = await asyncio.gather(*triple_tasks)
         s_dct["data"] = [pt for pt in processed_triples if pt is not None]
+        self.output_memo[text] = s_dct
         return s_dct
