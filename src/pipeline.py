@@ -23,6 +23,7 @@ class Pipeline:
         max_samples=None,
         save_every=100,
         concurrency=5,
+        start_index=0,
         save_path_prefix="output/",
     ):
         stage_1_all_results = {}
@@ -33,6 +34,8 @@ class Pipeline:
             if max_samples is not None and sample_count >= max_samples:
                 break
             sample_count += len(batch["texts"])
+            if sample_count < start_index:
+                continue
             stage_1_results = self._run_stage_1(batch, concurrency=concurrency)
             stage_2_results, log_text = self._run_stage_2(stage_1_results)
             if save_every and sample_count % save_every == 0:

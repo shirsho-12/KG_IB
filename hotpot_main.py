@@ -17,15 +17,21 @@ parser.add_argument(
 parser.add_argument(
     "--concurrency",
     type=int,
-    default=3,
+    default=50,
     help="Maximum number of concurrent Stage 1 requests",
 )
 
 parser.add_argument(
     "--save_every",
     type=int,
-    default=8,
+    default=100,
     help="Save results every N samples",
+)
+parser.add_argument(
+    "--start_index",
+    type=int,
+    default=0,
+    help="Start from sample index",
 )
 
 
@@ -48,9 +54,10 @@ def main():
     pipeline = Pipeline()
     stage_1_results, stage_2_results = pipeline.evaluate_dataset(
         dataloader,
-        max_samples=args.samples,
+        max_samples=None,
         save_every=args.save_every,
         concurrency=args.concurrency,
+        start_index=args.start_index,
         save_path_prefix=f"output/{dset_name}/{today}/",
     )
     print(f"Stage 1 and Stage 2 results saved to {output_path}")
