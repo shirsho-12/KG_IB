@@ -1,6 +1,7 @@
 from pprint import pprint
 from tqdm import tqdm
 from collections import defaultdict, deque
+from email.utils import parsedate_to_datetime
 import pandas as pd
 from pathlib import Path
 from src.utils import get_model, process_tasks_asynchronously
@@ -120,12 +121,79 @@ async def call_with_retries(kg, question, max_retries: int = 5):
             # Run sync LLM call in a thread to avoid blocking the event loop.
             return await asyncio.to_thread(evaluate_kg_qa, kg, question)
         except Exception as exc:
-            msg = str(exc)
-            if "Rate limit" in msg or "429" in msg:
-                await asyncio.sleep(60)
+            if _is_rate_limit_error(exc):
+                delay = _get_retry_after_seconds(exc)
+                await asyncio.sleep(delay if delay is not None else 60)
                 continue
             raise
     raise RuntimeError("Exceeded retries due to rate limiting.")
+
+
+def _is_rate_limit_error(exc: Exception) -> bool:
+    msg = str(exc)
+    if "Rate limit" in msg or "429" in msg:
+        return True
+    status = getattr(exc, "status_code", None)
+    if status == 429:
+        return True
+    code = getattr(exc, "code", None)
+    return code == 429
+
+
+def _get_retry_after_seconds(exc: Exception) -> float | None:
+    headers = _extract_headers(exc)
+    if not headers:
+        return None
+    headers_lc = {str(k).lower(): v for k, v in headers.items()}
+    for key in (
+        "retry-after",
+        "x-ratelimit-reset",
+        "x-ratelimit-reset-requests",
+        "x-ratelimit-reset-tokens",
+    ):
+        if key not in headers_lc:
+            continue
+        value = headers_lc[key]
+        if isinstance(value, (list, tuple)):
+            value = value[0] if value else None
+        if value is None:
+            continue
+        try:
+            delay = float(value)
+            if delay > 1e9:
+                delay = max(0.0, delay - time.time())
+            return delay + 1.0
+        except (TypeError, ValueError):
+            try:
+                dt = parsedate_to_datetime(str(value))
+                return max(0.0, dt.timestamp() - time.time()) + 1.0
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
+def _extract_headers(exc: Exception) -> dict | None:
+    for attr in ("headers", "response"):
+        obj = getattr(exc, attr, None)
+        if obj is None:
+            continue
+        if isinstance(obj, dict):
+            if "headers" in obj and isinstance(obj["headers"], dict):
+                return obj["headers"]
+        headers = getattr(obj, "headers", None)
+        if isinstance(headers, dict):
+            return headers
+    for attr in ("metadata", "body", "error", "args"):
+        obj = getattr(exc, attr, None)
+        if obj is None:
+            continue
+        if isinstance(obj, dict) and isinstance(obj.get("headers"), dict):
+            return obj["headers"]
+        if isinstance(obj, tuple):
+            for item in obj:
+                if isinstance(item, dict) and isinstance(item.get("headers"), dict):
+                    return item["headers"]
+    return None
 
 
 async def worker(task):
