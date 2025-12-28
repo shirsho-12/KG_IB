@@ -218,45 +218,17 @@ async def worker(task):
     return k, {"response": resp, "answer": answer}
 
 
-async def process_tasks_with_early_stop(tasks, worker, concurrency_limit, desc):
-    if not tasks:
-        return []
-    semaphore = asyncio.Semaphore(concurrency_limit)
-    results = []
-    stop_event = asyncio.Event()
-
-    async def process_one(task):
-        async with semaphore:
-            if stop_event.is_set():
-                return None
-            return await worker(task)
-
-    async_tasks = [asyncio.create_task(process_one(task)) for task in tasks]
-    with tqdm(total=len(tasks), desc=desc) as pbar:
-        try:
-            for fut in asyncio.as_completed(async_tasks):
-                try:
-                    res = await fut
-                except EarlyStopEvaluation:
-                    stop_event.set()
-                    for pending in async_tasks:
-                        if not pending.done():
-                            pending.cancel()
-                    break
-                if res is not None:
-                    results.append(res)
-                pbar.update(1)
-        finally:
-            for pending in async_tasks:
-                if not pending.done():
-                    pending.cancel()
-    return results
-
-
 async def run_eval():
-    return await process_tasks_with_early_stop(
-        tasks, worker, concurrency_limit=20, desc="Evaluating KG QA"
-    )
+    results = []
+    with tqdm(total=len(tasks), desc="Evaluating KG QA") as pbar:
+        for task in tasks:
+            try:
+                res = await worker(task)
+            except EarlyStopEvaluation:
+                break
+            results.append(res)
+            pbar.update(1)
+    return results
 
 
 processed_results = asyncio.run(run_eval())
