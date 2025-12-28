@@ -115,7 +115,8 @@ rate_limiter = RateLimiter(max_calls=20, period_seconds=60)
 
 
 async def call_with_retries(kg, question, max_retries: int = 5):
-    for _ in range(max_retries):
+    non_rate_limit_errors = 0
+    while True:
         await rate_limiter.acquire()
         try:
             # Run sync LLM call in a thread to avoid blocking the event loop.
@@ -125,8 +126,10 @@ async def call_with_retries(kg, question, max_retries: int = 5):
                 delay = _get_retry_after_seconds(exc)
                 await asyncio.sleep(delay if delay is not None else 60)
                 continue
-            raise
-    raise RuntimeError("Exceeded retries due to rate limiting.")
+            non_rate_limit_errors += 1
+            if non_rate_limit_errors >= max_retries:
+                raise
+            await asyncio.sleep(5)
 
 
 def _is_rate_limit_error(exc: Exception) -> bool:
