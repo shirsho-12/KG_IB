@@ -66,7 +66,8 @@ def evaluate_kg_qa(kg, question: str):
             continue
         for surface in surfaces:
             kg_str += f"({h} -> {surface} -> {t})\n"
-
+    # remove all curly braces from kg_str
+    kg_str = kg_str.replace("{", "").replace("}", "")
     kg_qa_prompt = f"""You are given a knowledge graph represented as a list of triples in the form (head -> relation -> tail).
     Your task is to answer the question based on the knowledge graph. Only use the information present in the knowledge graph to formulate your answer.
     Do not assume any external knowledge and only provide the answer. Think, then answer. Do not use external knowledge, but you are allowed to 
@@ -114,8 +115,15 @@ class RateLimiter:
 rate_limiter = RateLimiter(max_calls=20, period_seconds=60)
 
 
-async def call_with_retries(kg, question, max_retries: int = 5):
+class EarlyStopEvaluation(Exception):
+    pass
+
+
+async def call_with_retries(
+    kg, question, max_retries: int = 5, max_rate_limit_retries: int = 5
+):
     non_rate_limit_errors = 0
+    rate_limit_errors = 0
     while True:
         await rate_limiter.acquire()
         try:
@@ -123,6 +131,11 @@ async def call_with_retries(kg, question, max_retries: int = 5):
             return await asyncio.to_thread(evaluate_kg_qa, kg, question)
         except Exception as exc:
             if _is_rate_limit_error(exc):
+                rate_limit_errors += 1
+                if rate_limit_errors > max_rate_limit_retries:
+                    raise EarlyStopEvaluation(
+                        "Rate limit persisted after retries."
+                    ) from exc
                 delay = _get_retry_after_seconds(exc)
                 await asyncio.sleep(delay if delay is not None else 60)
                 continue
@@ -205,9 +218,44 @@ async def worker(task):
     return k, {"response": resp, "answer": answer}
 
 
+async def process_tasks_with_early_stop(tasks, worker, concurrency_limit, desc):
+    if not tasks:
+        return []
+    semaphore = asyncio.Semaphore(concurrency_limit)
+    results = []
+    stop_event = asyncio.Event()
+
+    async def process_one(task):
+        async with semaphore:
+            if stop_event.is_set():
+                return None
+            return await worker(task)
+
+    async_tasks = [asyncio.create_task(process_one(task)) for task in tasks]
+    with tqdm(total=len(tasks), desc=desc) as pbar:
+        try:
+            for fut in asyncio.as_completed(async_tasks):
+                try:
+                    res = await fut
+                except EarlyStopEvaluation:
+                    stop_event.set()
+                    for pending in async_tasks:
+                        if not pending.done():
+                            pending.cancel()
+                    break
+                if res is not None:
+                    results.append(res)
+                pbar.update(1)
+        finally:
+            for pending in async_tasks:
+                if not pending.done():
+                    pending.cancel()
+    return results
+
+
 async def run_eval():
-    return await process_tasks_asynchronously(
-        tasks, worker, concurrency_limit=50, desc="Evaluating KG QA"
+    return await process_tasks_with_early_stop(
+        tasks, worker, concurrency_limit=20, desc="Evaluating KG QA"
     )
 
 
