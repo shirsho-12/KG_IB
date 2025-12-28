@@ -1,6 +1,6 @@
 from pprint import pprint
 from tqdm import tqdm
-from collections import defaultdict
+from collections import defaultdict, deque
 import pandas as pd
 from pathlib import Path
 from src.utils import get_model, process_tasks_asynchronously
@@ -8,6 +8,7 @@ from src.agent.base import Agent
 import pickle
 from src.kg import NXKnowledgeGraph
 import asyncio
+import time
 
 from datasets import load_dataset
 
@@ -89,10 +90,47 @@ for k, v in tqdm(d_dct.items()):
     tasks.append((k, question, answer, kg))
 
 
+class RateLimiter:
+    def __init__(self, max_calls: int, period_seconds: int):
+        self.max_calls = max_calls
+        self.period_seconds = period_seconds
+        self.calls = deque()
+        self.lock = asyncio.Lock()
+
+    async def acquire(self):
+        while True:
+            async with self.lock:
+                now = time.monotonic()
+                while self.calls and now - self.calls[0] >= self.period_seconds:
+                    self.calls.popleft()
+                if len(self.calls) < self.max_calls:
+                    self.calls.append(now)
+                    return
+                wait_for = self.period_seconds - (now - self.calls[0])
+            await asyncio.sleep(wait_for)
+
+
+rate_limiter = RateLimiter(max_calls=20, period_seconds=60)
+
+
+async def call_with_retries(kg, question, max_retries: int = 5):
+    for _ in range(max_retries):
+        await rate_limiter.acquire()
+        try:
+            # Run sync LLM call in a thread to avoid blocking the event loop.
+            return await asyncio.to_thread(evaluate_kg_qa, kg, question)
+        except Exception as exc:
+            msg = str(exc)
+            if "Rate limit" in msg or "429" in msg:
+                await asyncio.sleep(60)
+                continue
+            raise
+    raise RuntimeError("Exceeded retries due to rate limiting.")
+
+
 async def worker(task):
     k, question, answer, kg = task
-    # Run sync LLM call in a thread to avoid blocking the event loop.
-    resp = await asyncio.to_thread(evaluate_kg_qa, kg, question)
+    resp = await call_with_retries(kg, question)
     return k, {"response": resp, "answer": answer}
 
 
