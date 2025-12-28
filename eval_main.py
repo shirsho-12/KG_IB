@@ -91,16 +91,18 @@ for k, v in tqdm(d_dct.items()):
 
 async def worker(task):
     k, question, answer, kg = task
-    resp = evaluate_kg_qa(kg, question)
+    # Run sync LLM call in a thread to avoid blocking the event loop.
+    resp = await asyncio.to_thread(evaluate_kg_qa, kg, question)
     return k, {"response": resp, "answer": answer}
 
 
-loop = asyncio.get_event_loop()
-processed_results = loop.run_until_complete(
-    process_tasks_asynchronously(
-        tasks, worker, concurrency_limit=4, desc="Evaluating KG QA"
+async def run_eval():
+    return await process_tasks_asynchronously(
+        tasks, worker, concurrency_limit=50, desc="Evaluating KG QA"
     )
-)
+
+
+processed_results = asyncio.run(run_eval())
 
 results = {}
 for k, res in processed_results:
