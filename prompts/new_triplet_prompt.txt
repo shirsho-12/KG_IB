@@ -1,5 +1,5 @@
 Your task is to extract entities and relations from the given text. 
-        Start by identifying entities, which can be people, places, organizations, concepts, etc.
+        Start by identifying entities, which can be people, places, dates, organizations, concepts, etc.
         Next, determine the relationships between these entities based on the context provided in the text.
         Structure your extraction such that each relationship connects two entities with a specific relation.
         Finally, represent each relationship as a triplet in the a JSON array format:
