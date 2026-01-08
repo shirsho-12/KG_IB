@@ -7,6 +7,7 @@ from src.dataloader import (
     get_hotpot_dataloader,
     get_musique_dataloader,
     get_2wikimultihopqa_dataloader,
+    get_subqa_dataloader,
 )
 from src.pipeline import Pipeline
 import pickle
@@ -17,7 +18,7 @@ parser.add_argument(
     "--dataset",
     type=str,
     default="hotpotqa",
-    help="Dataset to use: hotpotqa, musique, or 2wikimultihopqa",
+    help="Dataset to use: hotpotqa, musique, 2wikimultihopqa, or subqa",
 )
 
 parser.add_argument(
@@ -64,6 +65,17 @@ def main():
         dataloader = get_2wikimultihopqa_dataloader(
             data_path=data_path,
             partition="dev",
+            batch_size=args.save_every,
+            shuffle=False,
+        )
+    elif args.dataset == "subqa":
+        data_path = Path("data/subqa/")
+        dataloader = get_subqa_dataloader(
+            data_path=data_path / "dev_ori.json",
+            question_files=[
+                data_path / "dev_sub1.json",
+                data_path / "dev_sub2.json",
+            ],
             batch_size=args.save_every,
             shuffle=False,
         )
