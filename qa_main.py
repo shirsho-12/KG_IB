@@ -64,7 +64,7 @@ def main():
         data_path = Path("data/2wikimultihopqa/")
         dataloader = get_2wikimultihopqa_dataloader(
             data_path=data_path,
-            partition="dev",
+            partition="test",
             batch_size=args.save_every,
             shuffle=False,
         )

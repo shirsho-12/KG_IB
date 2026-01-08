@@ -102,7 +102,6 @@ class SubQADataSet(BaseDataset):
 
     def __getitem__(self, index: int):
         sample = self.data.iloc[index].to_dict()
-        print(sample)
         id_ = self.data.index[index]
         questions, answers = {}, {}
         question = sample["question"]
