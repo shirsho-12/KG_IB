@@ -62,7 +62,7 @@ class MuSiQueDataset(BaseDataset):
 
 
 class TwoWikiMultiHopQADataSet(BaseDataset):
-    def __init__(self, data_path, partition: str = "test"):
+    def __init__(self, data_path, partition: str = "dev"):
         self.data = json.loads(
             Path(data_path / (partition + ".json")).read_text(encoding="utf-8")
         )
