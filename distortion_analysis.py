@@ -44,6 +44,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--dataset", type=str, default="webnlg")
 parser.add_argument("--mi_threshold", type=float, default=0.25)
 parser.add_argument("--min_pairs", type=int, default=2)
+parser.add_argument("--lambda_sem", type=float, default=0.5)
+parser.add_argument("--lambda_type", type=float, default=0.5)
+parser.add_argument("--lambda_new", type=float, default=1.0)
+
 
 args = parser.parse_args()
 
@@ -63,7 +67,9 @@ with open(dataset_path, "rb") as f:
 
 kg = NXKnowledgeGraph()
 
-clusterer = OnlineRelationClusterer()
+clusterer = OnlineRelationClusterer(
+    lambda_sem=args.lambda_sem, lambda_type=args.lambda_type, lambda_new=args.lambda_new
+)
 
 
 for sample in tqdm(step1_data):
@@ -89,10 +95,11 @@ for h, r_surface, t, cid, sentence in tqdm(
 
 
 print(f"Filtered out {count} redundant edges. Total edges now: {len(kg.G.edges)}")
-save_path = Path.cwd() / "output" / args.dataset / "mi_threshold_analysis"
+save_path = Path.cwd() / "output" / args.dataset / "distortion_analysis"
 save_path.mkdir(parents=True, exist_ok=True)
 kg.save(
-    save_path / f"final_kg_mi_{args.mi_threshold}_minpairs_{args.min_pairs}.graphml"
+    save_path
+    / f"final_kg_mi_{args.lambda_sem}_{args.lambda_type}_{args.lambda_new}.graphml"
 )
 
 embedding_map = {}
@@ -229,7 +236,7 @@ axes[1, 2].set_title("Component Size vs Entropy")
 
 plt.tight_layout()
 plt.savefig(
-    f"{save_path}/network_analysis_{args.mi_threshold}_minpairs_{args.min_pairs}.png",
+    f"{save_path}/network_analysis_{args.lambda_sem}_{args.lambda_type}_{args.lambda_new}.png",
     dpi=300,
     bbox_inches="tight",
 )
