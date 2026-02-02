@@ -38,23 +38,23 @@ class Pipeline:
             if sample_count < start_index:
                 continue
             stage_1_results = self._run_stage_1(batch, concurrency=concurrency)
-            stage_2_results, log_text = self._run_stage_2(stage_1_results)
+            # stage_2_results, log_text = self._run_stage_2(stage_1_results)
             if save_every and sample_count % save_every == 0:
                 self.save_results(
                     stage_1_results,
                     f"{save_path_prefix}/stage_1_results_{sample_count}.pkl",
                 )
-                self.save_results(
-                    stage_2_results, f"{save_path_prefix}/kg_{sample_count}.pkl"
-                )
-                with open(f"{save_path_prefix}/log_{sample_count}.txt", "w") as f:
-                    f.write(full_log_text + log_text)
-            full_log_text += log_text
+                # self.save_results(
+                #     stage_2_results, f"{save_path_prefix}/kg_{sample_count}.pkl"
+                # )
+                # with open(f"{save_path_prefix}/log_{sample_count}.txt", "w") as f:
+                #     f.write(full_log_text + log_text)
+            # full_log_text += log_text
             stage_1_all_results.update(stage_1_results)
-            stage_2_all_results.update(stage_2_results)
+            # stage_2_all_results.update(stage_2_results)
 
-        with open(f"{save_path_prefix}/final_log.txt", "w") as f:
-            f.write(full_log_text)
+        # with open(f"{save_path_prefix}/final_log.txt", "w") as f:
+        #     f.write(full_log_text)
 
         return stage_1_all_results, stage_2_all_results
 

@@ -125,6 +125,32 @@ class SubQADataSet(BaseDataset):
         return {"id": id_, "questions": questions, "answers": answers, "text": samples}
 
 
+class MobyDickDataset(Dataset):
+    def __init__(self, text_path):
+        text = Path(text_path).read_text(encoding="utf-8")
+        lines = text.split("\n\n")
+        lines = [line for line in lines if line.strip() != ""]
+        lines = [
+            line.replace("\n", " ")
+            .replace("(_", "(")
+            .replace("_)", ")")
+            .replace("_.)", ")")
+            for line in lines
+        ]
+        new_lines = []
+        for line in lines:
+            if "CHAPTER" in line:
+                continue
+            new_lines.append(line)
+        self.lines = new_lines
+
+    def __len__(self):
+        return len(self.lines)
+
+    def __getitem__(self, idx):
+        return {"id": idx, "text": [self.lines[idx]]}
+
+
 def collate_fn(batch):
     ids = [item["id"] for item in batch]
     questions = [item["question"] for item in batch]
@@ -139,6 +165,20 @@ def subqa_collate_fn(batch):
     answers = [item["answers"] for item in batch]
     texts = [item["text"] for item in batch]
     return {"ids": ids, "questions": questions, "answers": answers, "texts": texts}
+
+
+def moby_collate_fn(batch):
+    ids = [item["id"] for item in batch]
+    texts = [item["text"] for item in batch]
+    return {"ids": ids, "texts": texts}
+
+
+def get_moby_dataloader(text_path, batch_size=20, shuffle=False):
+    dataset = MobyDickDataset(text_path=text_path)
+    dataloader = DataLoader(
+        dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=moby_collate_fn
+    )
+    return dataloader
 
 
 def get_hotpot_dataloader(data, partition="validation", batch_size=8, shuffle=False):

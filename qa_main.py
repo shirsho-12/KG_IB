@@ -8,6 +8,7 @@ from src.dataloader import (
     get_musique_dataloader,
     get_2wikimultihopqa_dataloader,
     get_subqa_dataloader,
+    get_moby_dataloader,
 )
 from src.pipeline import Pipeline
 import pickle
@@ -17,8 +18,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--dataset",
     type=str,
-    default="hotpotqa",
-    help="Dataset to use: hotpotqa, musique, 2wikimultihopqa, or subqa",
+    default="moby",
+    help="Dataset to use: hotpotqa, musique, 2wikimultihopqa, subqa, or moby",
 )
 
 parser.add_argument(
@@ -43,7 +44,7 @@ parser.add_argument(
 parser.add_argument(
     "--start_index",
     type=int,
-    default=0,
+    default=100,
     help="Start from sample index",
 )
 
@@ -79,6 +80,13 @@ def main():
             batch_size=args.save_every,
             shuffle=False,
         )
+    elif args.dataset == "moby":
+        text_path = Path("data/moby_dick.txt")
+        dataloader = get_moby_dataloader(
+            text_path=text_path,
+            batch_size=args.save_every,
+            shuffle=False,
+        )
     else:
         raise ValueError(f"Unknown dataset: {args.dataset}")
     today = time.strftime("%d-%m-%Y")
@@ -101,8 +109,8 @@ def main():
     print(f"Stage 1 and Stage 2 results saved to {output_path}")
     with open(output_file_path, "wb") as f:
         pickle.dump(stage_1_results, f)
-    with open(output_kg_file_path, "wb") as f:
-        pickle.dump(stage_2_results, f)
+    # with open(output_kg_file_path, "wb") as f:
+    #     pickle.dump(stage_2_results, f)
     print(f"Stage 1 results saved to {output_file_path}")
 
 

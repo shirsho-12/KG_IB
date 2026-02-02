@@ -12,7 +12,6 @@ Your task is to extract entities and relations from the given text.
         In your answer, please strictly only include the entities and relations and do not include any explanation or apologies.
 
 Here are some examples:
-Example 1:
 Text: Lyseren is a lake in the municipalities of Enebakk in Akershus county and Spydeberg in Østfold county , Norway .
 [{{
 "head": "Lyseren",
